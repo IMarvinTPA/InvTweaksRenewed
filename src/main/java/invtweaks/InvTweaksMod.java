@@ -7,8 +7,10 @@ import invtweaks.config.InvTweaksConfig;
 import invtweaks.gui.InvTweaksButtonSort;
 import invtweaks.packets.PacketSortInv;
 import invtweaks.packets.PacketUpdateConfig;
+import invtweaks.tree.InvTweaksItemTreeLoader;
 import invtweaks.util.ClientUtils;
 import invtweaks.util.Sorting;
+import invtweaks.util.Utils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -20,8 +22,12 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.client.gui.screen.inventory.CreativeScreen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.client.util.InputMappings;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.util.text.TextComponent;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.player.ServerPlayerEntity;
@@ -68,12 +74,15 @@ import org.apache.logging.log4j.Logger;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nullable;
+
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 import java.util.stream.IntStream;
 
 // The value here should match an entry in the META-INF/mods.toml file
@@ -115,7 +124,7 @@ public class InvTweaksMod {
                                             PlayerEntity.class,
                                             ItemStack.class));
     public static SimpleChannel NET_INST;
-    @Nullable
+    
     private static MinecraftServer server;
     private static BooleanSupplier isJEIKeyboardActive = () -> false;
     private static boolean clientOnly = true;
@@ -140,6 +149,7 @@ public class InvTweaksMod {
 
         InvTweaksConfig.loadConfig(
                 InvTweaksConfig.CLIENT_CONFIG, FMLPaths.CONFIGDIR.get().resolve("invtweaks-client.toml"));
+        
     }
 
     public static void setJEIKeyboardActiveFn(BooleanSupplier query) {
@@ -158,15 +168,62 @@ public class InvTweaksMod {
     }
 
     public static void requestSort(boolean isPlayer) {
+    	
+    	InvTweaksConfig.checkTreeForUpdates();
+    	
+        ItemStack selectedItem = ClientUtils.safeGetPlayer().getHeldItemMainhand();
+        ItemStack offhandStack = ClientUtils.safeGetPlayer().getHeldItemOffhand();
+
+        if (Utils.debugTree && selectedItem != null && !selectedItem.isEmpty()) {
+            logInGame("Max Sort: " + InvTweaksConfig.getTree().getLastTreeOrder(), true);
+            logInGame("Hand Item Details:", true);
+            logInGame(selectedItem.getItem().getRegistryName().toString(), true);
+            //logInGame("Classes: " + ListOfClassNameKind(selectedItem.getItem()));
+            logInGame("Item Order Index: " + Utils.getItemOrder(selectedItem), true);
+            if (offhandStack != null && !offhandStack.isEmpty()) {
+                logInGame("Off-Hand Item Details:", true);
+                logInGame(offhandStack.getItem().getRegistryName().toString(), true);
+                logInGame("Item Order Index: " + Utils.getItemOrder(offhandStack), true);
+                logInGame("Comparator result: " + Utils.compareItems(selectedItem, offhandStack), true);
+                logInGame("Comparator debug: " + Utils.mostRecentComparison, true);
+            }
+        }
+
         if (clientOnly()) {
             DistExecutor.unsafeRunWhenOn(
                     Dist.CLIENT, () -> () -> Sorting.executeSort(ClientUtils.safeGetPlayer(), isPlayer));
+            
         } else {
             NET_INST.sendToServer(new PacketSortInv(isPlayer));
         }
     }
+    
+    public static void addChatMessage(String message) {
+    	Minecraft mc = Minecraft.getInstance();
+        if(mc.ingameGUI != null) {
+            mc.ingameGUI.getChatGUI().printChatMessage(new StringTextComponent(message));
+        }
+    }
 
-    public static @Nullable
+    private static String buildLogString(Level level, String message) {
+        return InvTweaksConst.INGAME_LOG_PREFIX + ((level.equals(Level.SEVERE)) ? "[ERROR] " : "") + message;
+    }
+    
+    public static void logInGame(String message) {
+        logInGame(message, false);
+    }
+    
+    public static void logInGame(String message, boolean alreadyTranslated) {
+        String formattedMsg = buildLogString(Level.INFO,
+                (alreadyTranslated) ? message : I18n.format(message));
+
+        if(Minecraft.getInstance().ingameGUI != null) {
+            addChatMessage(formattedMsg);
+        }
+
+        LOGGER.info(formattedMsg);
+    }
+    public static 
     Slot getDefaultButtonPlacement(
             Collection<Slot> slots, Predicate<Slot> filter) {
         if (slots.stream().filter(filter).count() < MIN_SLOTS) {
@@ -341,7 +398,7 @@ public class InvTweaksMod {
     }
 
     @SubscribeEvent
-    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) throws Exception {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }

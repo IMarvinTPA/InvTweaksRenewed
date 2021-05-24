@@ -5,13 +5,19 @@ import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
 import com.google.common.collect.ImmutableMap;
+
+import invtweaks.InvTweaksConst;
 import invtweaks.InvTweaksMod;
 import invtweaks.packets.PacketUpdateConfig;
+import invtweaks.tree.InvTweaksItemTree;
+import invtweaks.tree.InvTweaksItemTreeBuilder;
+import invtweaks.tree.InvTweaksItemTreeLoader;
 import invtweaks.util.Utils;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.ItemStack;
@@ -31,6 +37,13 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 
 import javax.annotation.Nullable;
+
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Predicate;
@@ -95,6 +108,9 @@ public class InvTweaksConfig {
     private static Map<String, Category> COMPILED_CATS = DEFAULT_CATS;
     private static Ruleset COMPILED_RULES = DEFAULT_RULES;
     private static Map<String, ContOverride> COMPILED_CONT_OVERRIDES = DEFAULT_CONT_OVERRIDES;
+    private static InvTweaksItemTree COMPILED_TREE;
+    private static File treeFile;
+    private static long configLastModified = 42;
     private static boolean isDirty = false;
 
     static {
@@ -212,16 +228,18 @@ public class InvTweaksConfig {
 
     @SuppressWarnings("unused")
     @SubscribeEvent
-    public static void onLoad(final ModConfig.Loading configEvent) {
+    public static void onLoad(final ModConfig.Loading configEvent) throws Exception {
         ThreadTaskExecutor<?> executor = LogicalSidedProvider.WORKQUEUE.get(LogicalSide.CLIENT);
         executor.runAsync(() -> setDirty(true));
+        //setDirty(true);
     }
 
     @SuppressWarnings("unused")
     @SubscribeEvent
-    public static void onReload(final ModConfig.Reloading configEvent) {
+    public static void onReload(final ModConfig.Reloading configEvent) throws Exception {
         ThreadTaskExecutor<?> executor = LogicalSidedProvider.WORKQUEUE.get(LogicalSide.CLIENT);
         executor.runAsync(() -> setDirty(true));
+        //setDirty(true);
     }
 
     public static boolean isDirty() {
@@ -236,7 +254,22 @@ public class InvTweaksConfig {
             COMPILED_RULES = new Ruleset((List<String>) RULES.get());
             COMPILED_CONT_OVERRIDES =
                     cfgToCompiledContOverrides((List<UnmodifiableConfig>) CONT_OVERRIDES.get());
+            
+            //long newConfigLastModified = computeConfigLastModified();
+            //if (configLastModified != newConfigLastModified) {
+			loadTreeConfig();
+	            
+            //}
         }
+    }
+    
+    public static void checkTreeForUpdates()
+    {
+        long newConfigLastModified = computeConfigLastModified();
+        if (configLastModified != newConfigLastModified) {
+			loadTreeConfig();
+    	}
+    	
     }
 
     public static Map<String, Category> getSelfCompiledCats() {
@@ -249,6 +282,11 @@ public class InvTweaksConfig {
 
     public static Map<String, ContOverride> getSelfCompiledContOverrides() {
         return COMPILED_CONT_OVERRIDES;
+    }
+    
+    public static InvTweaksItemTree getTree()
+    {
+    	return COMPILED_TREE;
     }
 
     public static void loadConfig(ForgeConfigSpec spec, Path path) {
@@ -486,7 +524,7 @@ public class InvTweaksConfig {
 
     public static class ContOverride {
         private final int x, y;
-        @Nullable
+        
         private final IntList sortRange;
         private final String sortRangeSpec;
 
@@ -524,7 +562,7 @@ public class InvTweaksConfig {
             return y;
         }
 
-        public @Nullable
+        public 
         IntList getSortRange() {
             return sortRange;
         }
@@ -542,4 +580,183 @@ public class InvTweaksConfig {
             return result;
         }
     }
+    
+    private static long computeConfigLastModified() {
+        long sum = Long.MIN_VALUE;
+        if (InvTweaksConst.INVTWEAKS_TREES_DIR.exists())
+        {
+            File[] treeFiles = InvTweaksConst.INVTWEAKS_TREES_DIR.listFiles();
+            
+            for(File tree: treeFiles) {
+                //Make sure it is the type of file we want.
+                if (tree.getName().endsWith(".tree")) {
+                    sum += tree.lastModified();
+                }
+            }
+        }
+        return sum + InvTweaksConst.CONFIG_RULES_FILE.lastModified() + InvTweaksConst.CONFIG_TREE_FILE.lastModified();
+    }
+    
+    private static boolean loadTreeConfig() {
+
+        // Ensure the config folder exists
+        File configDir = InvTweaksConst.MINECRAFT_CONFIG_DIR;
+        if(!configDir.exists()) {
+            configDir.mkdir();
+        }
+        
+        //Create the Config file directory.
+        if (!InvTweaksConst.INVTWEAKS_CONFIG_DIR.exists()) {
+            InvTweaksConst.INVTWEAKS_CONFIG_DIR.mkdir();
+        }
+        
+        if (!InvTweaksConst.INVTWEAKS_TREES_DIR.exists()) {
+            if (InvTweaksConst.INVTWEAKS_TREES_DIR.mkdir()) {
+                extractFile(new ResourceLocation(InvTweaksConst.INVTWEAKS_RESOURCE_DOMAIN, "tree_readme.txt"),
+                    new File(InvTweaksConst.INVTWEAKS_TREES_DIR, "readme.txt"));
+            }
+        }
+       
+        // Compatibility: Tree version check
+        try {
+            if(!(InvTweaksItemTreeLoader.isValidVersion(InvTweaksConst.CONFIG_TREE_FILE))) {
+                backupFile(InvTweaksConst.CONFIG_TREE_FILE);
+            }
+        } catch(Exception e) {
+        	InvTweaksMod.LOGGER.warn("Failed to check item tree version: " + e.getMessage());
+        }
+
+        // Compatibility: File names check
+        if(InvTweaksConst.OLD_CONFIG_TREE_FILE.exists()) {
+            if(InvTweaksConst.CONFIG_RULES_FILE.exists()) {
+                backupFile(InvTweaksConst.CONFIG_TREE_FILE);
+            }
+            InvTweaksConst.OLD_CONFIG_TREE_FILE.renameTo(InvTweaksConst.CONFIG_TREE_FILE);
+        } else if(InvTweaksConst.OLDER_CONFIG_RULES_FILE.exists()) {
+            if(InvTweaksConst.CONFIG_RULES_FILE.exists()) {
+                backupFile(InvTweaksConst.CONFIG_RULES_FILE);
+            }
+            InvTweaksConst.OLDER_CONFIG_RULES_FILE.renameTo(InvTweaksConst.CONFIG_RULES_FILE);
+        }
+
+        // Create missing files
+
+        if(!InvTweaksConst.CONFIG_RULES_FILE.exists() && extractFile(InvTweaksConst.DEFAULT_CONFIG_FILE,
+                InvTweaksConst.CONFIG_RULES_FILE)) {
+            InvTweaksMod.logInGame(InvTweaksConst.CONFIG_RULES_FILE + " " +
+                    I18n.format("invtweaks.loadconfig.filemissing"));
+        }
+        if(!InvTweaksConst.CONFIG_TREE_FILE.exists() && extractFile(InvTweaksConst.DEFAULT_CONFIG_TREE_FILE,
+                InvTweaksConst.CONFIG_TREE_FILE)) {
+        	InvTweaksMod.logInGame(InvTweaksConst.CONFIG_TREE_FILE + " " +
+                    I18n.format("invtweaks.loadconfig.filemissing"));
+        }
+
+        boolean treeBuilt = false;
+        if (InvTweaksConst.INVTWEAKS_TREES_DIR.exists()) {            
+            treeBuilt = InvTweaksItemTreeBuilder.buildNewTree();
+        }
+
+        configLastModified = computeConfigLastModified();
+
+        // Load
+
+        @Nullable String error = null;
+        @Nullable Exception errorException = null;
+
+        try {
+
+            // Configuration creation
+            if (treeBuilt & InvTweaksConst.MERGED_TREE_FILE.exists()) {
+            	treeFile = InvTweaksConst.MERGED_TREE_FILE;
+            } else if (treeBuilt & InvTweaksConst.MERGED_TREE_FILE_ALT.exists()) {
+            	treeFile = InvTweaksConst.MERGED_TREE_FILE_ALT;
+    		} else {
+            	treeFile = InvTweaksConst.CONFIG_TREE_FILE;
+            }
+
+    		COMPILED_TREE = InvTweaksItemTreeLoader.load(treeFile);
+
+            /*try {
+            	if (treeFile.canRead()) {
+            		COMPILED_TREE = InvTweaksItemTreeLoader.load(treeFile);
+            	}
+            } catch (Exception ex) {
+            	InvTweaksMod.LOGGER.error("Error loading tree file: " + treeFile.getAbsolutePath());
+            	InvTweaksMod.LOGGER.error("Error loading tree file error: " + ex.getMessage());
+            }*/
+            
+        } catch(FileNotFoundException e) {
+            error = "Config file not found";
+            errorException = e;
+        } catch(Exception e) {
+            error = "Error while loading config";
+            errorException = e;
+        }
+
+        if(error != null) {
+        	InvTweaksMod.LOGGER.error(error);
+        	InvTweaksMod.logInGame(error);
+
+            try {
+                // TODO: Refactor this so I'm not just copying the code from above.
+                // The purpose of this is to try to deal with any errors in their config files
+                // Because things crash if config is null
+                backupFile(InvTweaksConst.CONFIG_TREE_FILE);
+                backupFile(InvTweaksConst.CONFIG_RULES_FILE);
+                backupFile(InvTweaksConst.CONFIG_PROPS_FILE);
+
+                //Intentionally not trying to use the merged file.
+                extractFile(InvTweaksConst.DEFAULT_CONFIG_FILE, InvTweaksConst.CONFIG_RULES_FILE);
+                extractFile(InvTweaksConst.DEFAULT_CONFIG_TREE_FILE, InvTweaksConst.CONFIG_TREE_FILE);
+
+                treeFile = InvTweaksConst.CONFIG_TREE_FILE;
+
+        			COMPILED_TREE = InvTweaksItemTreeLoader.load(treeFile);
+                	
+            } catch(Exception e) {
+                // But if this fails too there's not much point in trying again
+
+                if(e.getCause() == null) {
+                    e.initCause(errorException);
+                }
+
+                throw new Error("InvTweaks config load failed", e);
+            }
+
+            return false;
+        } else {
+            return true;
+        }
+    }
+    
+    private static boolean extractFile(ResourceLocation resource, File destination) {
+        try(InputStream input = Minecraft.getInstance().getResourceManager().getResource(resource).getInputStream()) {
+            try {
+                FileUtils.copyInputStreamToFile(input, destination);
+                return true;
+            } catch(IOException e) {
+            	InvTweaksMod.logInGame("[16] The mod won't work, because " + destination + " creation failed!");
+                InvTweaksMod.LOGGER.error("Cannot create " + destination + " file: " + e.getMessage());
+                return false;
+            }
+        } catch(IOException e) {
+            InvTweaksMod.logInGame("[15] The mod won't work, because " + resource + " extraction failed!");
+            InvTweaksMod.LOGGER.error("Cannot extract " + resource + " file: " + e.getMessage());
+            return false;
+        }
+    }    
+    
+    private static void backupFile(File file) {
+        File newFile = new File(file.getParentFile(), file.getName() + ".bak");
+        InvTweaksMod.LOGGER.warn("Backing up file: %1$s to %2$s", file.getAbsolutePath(), newFile.getAbsolutePath());
+        if(newFile.exists()) {
+        	InvTweaksMod.LOGGER.warn("New file %1$s already exists, deleting old.", newFile.getAbsolutePath());
+            newFile.delete();
+        }
+        file.renameTo(newFile);
+    }
+
+
+    
 }
