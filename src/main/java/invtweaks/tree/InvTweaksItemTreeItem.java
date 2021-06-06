@@ -1,11 +1,8 @@
 package invtweaks.tree;
 
-import invtweaks.InvTweaksConst;
 import invtweaks.api.IItemTreeItem;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.NBTUtil;
-//import org.jetbrains.annotations.NotNull;
-//import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 

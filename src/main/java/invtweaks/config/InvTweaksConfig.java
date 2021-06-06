@@ -102,6 +102,7 @@ public class InvTweaksConfig {
     private static final ForgeConfigSpec.ConfigValue<List<? extends UnmodifiableConfig>>
             CONT_OVERRIDES;
     private static final Map<UUID, Map<String, Category>> playerToCats = new HashMap<>();
+    private static final Map<UUID, InvTweaksItemTree> playerToTree = new HashMap<>();
     private static final Map<UUID, Ruleset> playerToRules = new HashMap<>();
     private static final Set<UUID> playerAutoRefill = new HashSet<>();
     private static final Map<UUID, Map<String, ContOverride>> playerToContOverrides = new HashMap<>();
@@ -223,7 +224,8 @@ public class InvTweaksConfig {
                 (List<UnmodifiableConfig>) CATS.get(),
                 (List<String>) RULES.get(),
                 (List<UnmodifiableConfig>) CONT_OVERRIDES.get(),
-                ENABLE_AUTOREFILL.get());
+                ENABLE_AUTOREFILL.get(),
+                COMPILED_TREE);
     }
 
     @SuppressWarnings("unused")
@@ -263,12 +265,13 @@ public class InvTweaksConfig {
         }
     }
     
-    public static void checkTreeForUpdates()
+    public static boolean checkTreeForUpdates()
     {
         long newConfigLastModified = computeConfigLastModified();
         if (configLastModified != newConfigLastModified) {
-			loadTreeConfig();
+			return loadTreeConfig();
     	}
+        return false;
     	
     }
 
@@ -284,7 +287,7 @@ public class InvTweaksConfig {
         return COMPILED_CONT_OVERRIDES;
     }
     
-    public static InvTweaksItemTree getTree()
+    public static InvTweaksItemTree getSelfCompiledTree()
     {
     	return COMPILED_TREE;
     }
@@ -303,6 +306,10 @@ public class InvTweaksConfig {
 
     public static void setPlayerCats(PlayerEntity ent, Map<String, Category> cats) {
         playerToCats.put(ent.getUniqueID(), cats);
+    }
+
+    public static void setPlayerTree(PlayerEntity ent, InvTweaksItemTree playerTree) {
+        playerToTree.put(ent.getUniqueID(), playerTree);
     }
 
     public static void setPlayerRules(PlayerEntity ent, Ruleset ruleset) {
@@ -327,6 +334,15 @@ public class InvTweaksConfig {
             return getSelfCompiledCats();
         }
         return playerToCats.getOrDefault(ent.getUniqueID(), DEFAULT_CATS);
+    }
+
+
+    public static InvTweaksItemTree getPlayerTree(PlayerEntity ent) {
+        if (DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> () -> ent == Minecraft.getInstance().player)
+                == Boolean.TRUE) {
+            return getSelfCompiledTree();
+        }
+        return playerToTree.getOrDefault(ent.getUniqueID(), COMPILED_TREE);
     }
 
     public static Ruleset getPlayerRules(PlayerEntity ent) {
@@ -681,10 +697,7 @@ public class InvTweaksConfig {
             treeFile = InvTweaksConst.CONFIG_TREE_FILE;
 
     		COMPILED_TREE = InvTweaksItemTreeLoader.load(treeFile);
-
-            //Refresh the tooltips.
-            DistExecutor.safeRunWhenOn(
-                    Dist.CLIENT, () -> () -> Minecraft.getInstance().populateSearchTreeManager());
+            isDirty = true;
 
         } catch(FileNotFoundException e) {
             error = "Config file not found";
@@ -693,7 +706,7 @@ public class InvTweaksConfig {
             error = "Error while loading config";
             errorException = e;
         }
-
+       
         if(error != null) {
         	InvTweaksMod.LOGGER.error(error);
         	InvTweaksMod.logInGame(error);

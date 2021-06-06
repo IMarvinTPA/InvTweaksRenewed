@@ -73,7 +73,7 @@ public class Sorting {
                                     List<Equivalence.Wrapper<ItemStack>> stackWs =
                                             new ArrayList<>(gatheredSlots.keySet());
                                     stackWs.sort(
-                                            Comparator.comparing(Equivalence.Wrapper::get, Utils.TREE_COMPARATOR));
+                                            Comparator.comparing(Equivalence.Wrapper::get, InvTweaksConfig.getPlayerTree(player).getTreeComparator()));
 
                                     // System.out.println("SZ: "+gatheredSlots.size());
                                     for (Map.Entry<String, InvTweaksConfig.Category> ent : cats.entrySet()) {
@@ -125,7 +125,7 @@ public class Sorting {
                                                 .mapToObj(inv.mainInventory::get)
                                                 .filter(st -> !st.isEmpty())
                                                 .iterator());
-                stacks.sort(Utils.TREE_COMPARATOR);
+                stacks.sort(InvTweaksConfig.getPlayerTree(player).getTreeComparator());
                 stacks = new LinkedList<>(stacks);
 
                 for (int i = 0; i < inv.mainInventory.size(); ++i) {
@@ -218,7 +218,7 @@ public class Sorting {
                                         List<Equivalence.Wrapper<ItemStack>> stackWs =
                                                 new ArrayList<>(gatheredSlots.keySet());
                                         stackWs.sort(
-                                                Comparator.comparing(Equivalence.Wrapper::get, Utils.TREE_COMPARATOR));
+                                                Comparator.comparing(Equivalence.Wrapper::get, InvTweaksConfig.getPlayerTree(player).getTreeComparator()));
 
                                         ListIterator<Slot> toIt = validSlots.listIterator();
                                         for (Equivalence.Wrapper<ItemStack> stackW : stackWs) {
@@ -243,7 +243,7 @@ public class Sorting {
                                                     .map(Slot::getStack)
                                                     .filter(st -> !st.isEmpty())
                                                     .iterator());
-                    stacks.sort(Utils.TREE_COMPARATOR);
+                    stacks.sort(InvTweaksConfig.getPlayerTree(player).getTreeComparator());
 
                     Iterator<Slot> slotIt = validSlots.iterator();
                     for (ItemStack stack : stacks) {

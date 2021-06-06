@@ -37,7 +37,7 @@ public class ToolTipEvent {
         }
         try {
 	        if(true) { //cfgManager.getConfig().getProperty(InvTweaksConfig.PROP_TOOLTIP_PATH).equals("true")) {        
-	        	InvTweaksItemTree tree = InvTweaksConfig.getTree();
+	        	InvTweaksItemTree tree = InvTweaksConfig.getSelfCompiledTree();
         		if (tree == null) {
         			return;
         		}
@@ -49,8 +49,8 @@ public class ToolTipEvent {
 	                return;
 	
 	            Set<String> paths = new HashSet<>();
-	            IItemTreeCategory root = InvTweaksConfig.getTree().getRootCategory();
-	            int unsortedZone = InvTweaksConfig.getTree().getLastTreeOrder();
+	            IItemTreeCategory root = InvTweaksConfig.getSelfCompiledTree().getRootCategory();
+	            int unsortedZone = InvTweaksConfig.getSelfCompiledTree().getLastTreeOrder();
 	            int minOrder = Integer.MAX_VALUE;
 	            for(IItemTreeItem item: items) {
 	                String path = item.getPath();

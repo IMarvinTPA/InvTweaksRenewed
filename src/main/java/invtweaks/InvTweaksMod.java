@@ -7,6 +7,7 @@ import invtweaks.config.InvTweaksConfig;
 import invtweaks.gui.InvTweaksButtonSort;
 import invtweaks.packets.PacketSortInv;
 import invtweaks.packets.PacketUpdateConfig;
+import invtweaks.tree.InvTweaksItemTree;
 import invtweaks.tree.InvTweaksItemTreeLoader;
 import invtweaks.util.ClientUtils;
 import invtweaks.util.Sorting;
@@ -167,29 +168,34 @@ public class InvTweaksMod {
         }
     }
 
-    public static void requestSort(boolean isPlayer) {
-    	
-    	InvTweaksConfig.checkTreeForUpdates();
-    	
-        ItemStack selectedItem = ClientUtils.safeGetPlayer().getHeldItemMainhand();
-        ItemStack offhandStack = ClientUtils.safeGetPlayer().getHeldItemOffhand();
-
-        if (Utils.debugTree && selectedItem != null && !selectedItem.isEmpty()) {
-            logInGame("Max Sort: " + InvTweaksConfig.getTree().getLastTreeOrder(), true);
-            logInGame("Hand Item Details:", true);
-            logInGame(selectedItem.getItem().getRegistryName().toString(), true);
-            logInGame("Classes: " + ListOfClassNameKind(selectedItem.getItem()));
-            logInGame("Item Order Index: " + Utils.getItemOrder(selectedItem), true);
-            if (offhandStack != null && !offhandStack.isEmpty()) {
-                logInGame("Off-Hand Item Details:", true);
-                logInGame(offhandStack.getItem().getRegistryName().toString(), true);
-                logInGame("Item Order Index: " + Utils.getItemOrder(offhandStack), true);
-                logInGame("Comparator result: " + Utils.compareItems(selectedItem, offhandStack), true);
-                logInGame("Comparator debug: " + Utils.mostRecentComparison, true);
-            }
+    public static void checkTreeForUpdates() {
+        if (InvTweaksConfig.checkTreeForUpdates()) {
+            //Refresh the tooltips.
+            Minecraft.getInstance().populateSearchTreeManager();
         }
+    }
 
-        if (clientOnly()) {
+    public static void requestSort(boolean isPlayer) {    	
+        if (clientOnly()) {    	
+            ItemStack selectedItem = ClientUtils.safeGetPlayer().getHeldItemMainhand();
+            ItemStack offhandStack = ClientUtils.safeGetPlayer().getHeldItemOffhand();
+            InvTweaksItemTree tree = InvTweaksConfig.getPlayerTree(ClientUtils.safeGetPlayer());
+
+            if (tree.debugTree && selectedItem != null && !selectedItem.isEmpty()) {
+                logInGame("Max Sort: " + tree.getLastTreeOrder(), true);
+                logInGame("Hand Item Details:", true);
+                logInGame(selectedItem.getItem().getRegistryName().toString(), true);
+                logInGame("Classes: " + ListOfClassNameKind(selectedItem.getItem()));
+                logInGame("Item Order Index: " + tree.getItemOrder(selectedItem), true);
+                if (offhandStack != null && !offhandStack.isEmpty()) {
+                    logInGame("Off-Hand Item Details:", true);
+                    logInGame(offhandStack.getItem().getRegistryName().toString(), true);
+                    logInGame("Item Order Index: " + tree.getItemOrder(offhandStack), true);
+                    logInGame("Comparator result: " + tree.compareItems(selectedItem, offhandStack), true);
+                    logInGame("Comparator debug: " + tree.mostRecentComparison, true);
+                }
+            }
+
             DistExecutor.unsafeRunWhenOn(
                     Dist.CLIENT, () -> () -> Sorting.executeSort(ClientUtils.safeGetPlayer(), isPlayer));
             
@@ -510,7 +516,8 @@ public class InvTweaksMod {
                     .get("sort_player")
                     .isActiveAndMatches(
                             InputMappings.getInputByCode(event.getKeyCode(), event.getScanCode()))) {
-                requestSort(true);
+                                checkTreeForUpdates();
+                                requestSort(true);
             }
             if (InvTweaksConfig.isSortEnabled(false)
                     && screensWithExtSort.contains(event.getGui())
@@ -518,7 +525,8 @@ public class InvTweaksMod {
                     .get("sort_inventory")
                     .isActiveAndMatches(
                             InputMappings.getInputByCode(event.getKeyCode(), event.getScanCode()))) {
-                requestSort(false);
+                                checkTreeForUpdates();
+                                requestSort(false);
             }
 
             Slot slot = ((ContainerScreen<?>) event.getGui()).getSlotUnderMouse();
@@ -530,7 +538,8 @@ public class InvTweaksMod {
                         .get("sort_either")
                         .isActiveAndMatches(
                                 InputMappings.getInputByCode(event.getKeyCode(), event.getScanCode()))) {
-                    requestSort(isPlayerSort);
+                                    checkTreeForUpdates();
+                                    requestSort(isPlayerSort);
                 }
             }
         }
@@ -549,8 +558,9 @@ public class InvTweaksMod {
                 boolean isPlayerSort = slot.inventory instanceof PlayerInventory;
                 if (InvTweaksConfig.isSortEnabled(isPlayerSort)
                         && (isPlayerSort || screensWithExtSort.contains(event.getGui()))) {
-                    requestSort(isPlayerSort);
-                    event.setCanceled(true); // stop pick block event
+                            checkTreeForUpdates();
+                            requestSort(isPlayerSort);
+                            event.setCanceled(true); // stop pick block event
                 }
             }
         }
