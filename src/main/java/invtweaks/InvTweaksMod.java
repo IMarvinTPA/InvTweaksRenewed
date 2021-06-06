@@ -178,7 +178,7 @@ public class InvTweaksMod {
             logInGame("Max Sort: " + InvTweaksConfig.getTree().getLastTreeOrder(), true);
             logInGame("Hand Item Details:", true);
             logInGame(selectedItem.getItem().getRegistryName().toString(), true);
-            //logInGame("Classes: " + ListOfClassNameKind(selectedItem.getItem()));
+            logInGame("Classes: " + ListOfClassNameKind(selectedItem.getItem()));
             logInGame("Item Order Index: " + Utils.getItemOrder(selectedItem), true);
             if (offhandStack != null && !offhandStack.isEmpty()) {
                 logInGame("Off-Hand Item Details:", true);
@@ -197,6 +197,22 @@ public class InvTweaksMod {
             NET_INST.sendToServer(new PacketSortInv(isPlayer));
         }
     }
+
+    private static String ListOfClassNameKind(Object o)
+    {
+        String resString = "";
+        Class testClass = o.getClass();
+        while (testClass != null)
+        {
+            resString += testClass.getName().toLowerCase();
+            //The secret sauce:
+            testClass = testClass.getSuperclass();
+            if (testClass != null) resString += ", ";
+        }
+        return resString;
+    }
+
+
     
     public static void addChatMessage(String message) {
     	Minecraft mc = Minecraft.getInstance();

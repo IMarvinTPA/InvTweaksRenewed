@@ -1,10 +1,8 @@
 package invtweaks.tree;
 
 
-import invtweaks.tree.InvTweaksItemTreeItem;
 import invtweaks.util.Utils;
 import invtweaks.InvTweaksConst;
-import invtweaks.tree.InvTweaksItemTreeCategory;
 import invtweaks.InvTweaksMod;
 import invtweaks.api.IItemTree;
 import invtweaks.api.IItemTreeCategory;
@@ -15,13 +13,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.NBTUtil;
 import net.minecraft.tags.ItemTags;
-import net.minecraft.util.NonNullList;
 import net.minecraft.util.RegistryKey;
 import net.minecraft.util.ResourceLocation;
-//import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-//import net.minecraftforge.fml.common.registry.ForgeRegistries;
-//import net.minecraftforge.oredict.OreDictionary;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import org.apache.logging.log4j.Logger;
@@ -40,7 +33,6 @@ public class InvTweaksItemTree implements IItemTree {
 
     private static final Logger log = InvTweaksMod.LOGGER;
     
-    private static List<IItemTreeItem> defaultItems = null;
     /**
      * All categories, stored by name
      */
@@ -59,9 +51,6 @@ public class InvTweaksItemTree implements IItemTree {
 
     private String rootCategory;
     
-    private List<OreDictInfo> oresRegistered = new ArrayList<>();
-    
-    
     private List<ItemStack> allGameItems = new ArrayList<ItemStack>();
 
     private int highestOrder = 0;
@@ -73,20 +62,6 @@ public class InvTweaksItemTree implements IItemTree {
     }
 
     public void reset() {
-
-        if(defaultItems == null) {
-            defaultItems = new ArrayList<>();
-            
-            IItemTreeCategory rootCat = getRootCategory(); 
-            String rootName = "stuff";
-            if (rootCat != null) {
-            	rootName = rootCat.getName();
-            }
-            
-            defaultItems.add(new InvTweaksItemTreeItem(UNKNOWN_ITEM, null, InvTweaksConst.DAMAGE_WILDCARD, null,
-                    Integer.MAX_VALUE, rootName));
-        }
-
         // Reset tree
         categories.clear();
         itemsByName.clear();
@@ -350,35 +325,16 @@ public class InvTweaksItemTree implements IItemTree {
 	            if(i != null) {
 	                addItem(category,
 	                        new InvTweaksItemTreeItem(name, i.getRegistryName().toString(), InvTweaksConst.DAMAGE_WILDCARD, null, order, path));
-	                log.info(String.format("An OreDictionary entry for %s is named %s", oreName, i.getRegistryName().toString()));
 	            } else {
 	                log.warn(String.format("An OreDictionary entry for %s is null", oreName));
 	            }
 	        }
-	        oresRegistered.add(new OreDictInfo(category, name, oreName, order, path));
     	} catch (Exception ex) {
     		log.warn(String.format("An OreDictionary name '%s' contains invalid characters.", oreName));
     	}
     	
     }
-
-    //ATB: I hope I don't need this any more...
-    /*@SubscribeEvent
-    public void tagRegistered( ItemTags ev) {
-        // TODO: It looks like Mojang changed the internal name type to ResourceLocation. Evaluate how much of a pain that will be.
-        oresRegistered.stream().filter(ore -> ore.oreName.equals(ev.getName())).forEach(ore -> {
-             ItemStack evOre = ev.getOre();
-            if(!evOre.isEmpty()) {
-                // TODO: It looks like Mojang changed the internal name type to ResourceLocation. Evaluate how much of a pain that will be.
-                addItem(ore.category, new InvTweaksItemTreeItem(ore.name, evOre.getItem().getRegistryName().toString(),
-                        evOre.getItemDamage(), null, ore.order, ore.orePath));
-            } else {
-                log.warn(String.format("An OreDictionary entry for %s is null", ev.getName()));
-            }
-        });
-    }
-    */
-    
+   
     public void registerClass(String category, String name, String className, CompoundNBT extraData, int order, String path)
     {
         if (allGameItems.size() == 0)
@@ -400,13 +356,19 @@ public class InvTweaksItemTree implements IItemTree {
                         //An empty toolclass will match non-tools.                        
                         doIt = tclass.equals(Utils.getToolClass(stack, item));                        
                     }
-                    if (doIt && extraData.contains("armortype") && item instanceof ArmorItem) 
+                    if (doIt && extraData.contains("armortype")) 
                     {
-                        ArmorItem armor = (ArmorItem) item;
-                        String keyArmorType = extraData.getString("armortype");
-                        String itemArmorType = armor.getEquipmentSlot().getName().toLowerCase();
-                        doIt = (keyArmorType.equals(itemArmorType));
-                        armor = null;
+                    	if (item instanceof ArmorItem) {
+	                        ArmorItem armor = (ArmorItem) item;
+	                        String keyArmorType = extraData.getString("armortype");
+	                        String itemArmorType = armor.getEquipmentSlot().getName().toLowerCase();
+	                        doIt = (keyArmorType.equals(itemArmorType));
+	                        armor = null;
+                    	} else {
+                    		//The ArmorItem isn't a proper ArmorItem (HorseArmorItem)
+                    		doIt = false;
+                    	}
+                    	
                     }
                     if (doIt && extraData.contains("isshield")) 
                     {                        
@@ -423,22 +385,6 @@ public class InvTweaksItemTree implements IItemTree {
         }
     }
 
-    private static class OreDictInfo {
-        String category;
-        String name;
-        String oreName;
-        int order;
-        String orePath;
-
-        OreDictInfo(String category_, String name_, String oreName_, int order_, String orePath_) {
-            category = category_;
-            name = name_;
-            oreName = oreName_;
-            order = order_;
-            orePath = orePath_;
-        }
-    }
-    
     private void populateGameItems()
     {
         for (Entry<RegistryKey<Item>, Item> entry : ForgeRegistries.ITEMS.getEntries())

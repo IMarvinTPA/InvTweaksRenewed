@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -24,7 +23,6 @@ import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
 import invtweaks.InvTweaksConst;
-import invtweaks.tree.InvTweaksItemTreeLoader;
 import invtweaks.InvTweaksMod;
 
 public class InvTweaksItemTreeBuilder {
@@ -72,7 +70,7 @@ public class InvTweaksItemTreeBuilder {
 
             File treeFile = null;
             if (InvTweaksConst.TEMP_DIR.exists()) {
-                //Hide the output file so the user is unlikely to think the may edit it.
+                //Hide the output file so the user is unlikely to think they may edit it.
                 treeFile = InvTweaksConst.MERGED_TREE_FILE;
                 log.info("Saving merged tree in TEMP folder.");
             } else {

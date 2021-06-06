@@ -24,7 +24,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 //import net.minecraftforge.fml.relauncher.Side;
 
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber()
+@Mod.EventBusSubscriber(Dist.CLIENT)
 public class ToolTipEvent {
 
 	@OnlyIn(Dist.CLIENT)

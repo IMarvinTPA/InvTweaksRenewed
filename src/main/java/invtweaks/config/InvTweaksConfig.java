@@ -609,7 +609,11 @@ public class InvTweaksConfig {
         if (!InvTweaksConst.INVTWEAKS_CONFIG_DIR.exists()) {
             InvTweaksConst.INVTWEAKS_CONFIG_DIR.mkdir();
         }
-        
+
+        if (!InvTweaksConst.TEMP_DIR.exists()) {
+            InvTweaksConst.TEMP_DIR.mkdir();
+        }
+
         if (!InvTweaksConst.INVTWEAKS_TREES_DIR.exists()) {
             if (InvTweaksConst.INVTWEAKS_TREES_DIR.mkdir()) {
                 extractFile(new ResourceLocation(InvTweaksConst.INVTWEAKS_RESOURCE_DOMAIN, "tree_readme.txt"),
@@ -674,18 +678,14 @@ public class InvTweaksConfig {
     		} else {
             	treeFile = InvTweaksConst.CONFIG_TREE_FILE;
             }
+            treeFile = InvTweaksConst.CONFIG_TREE_FILE;
 
     		COMPILED_TREE = InvTweaksItemTreeLoader.load(treeFile);
 
-            /*try {
-            	if (treeFile.canRead()) {
-            		COMPILED_TREE = InvTweaksItemTreeLoader.load(treeFile);
-            	}
-            } catch (Exception ex) {
-            	InvTweaksMod.LOGGER.error("Error loading tree file: " + treeFile.getAbsolutePath());
-            	InvTweaksMod.LOGGER.error("Error loading tree file error: " + ex.getMessage());
-            }*/
-            
+            //Refresh the tooltips.
+            DistExecutor.safeRunWhenOn(
+                    Dist.CLIENT, () -> () -> Minecraft.getInstance().populateSearchTreeManager());
+
         } catch(FileNotFoundException e) {
             error = "Config file not found";
             errorException = e;
@@ -697,32 +697,9 @@ public class InvTweaksConfig {
         if(error != null) {
         	InvTweaksMod.LOGGER.error(error);
         	InvTweaksMod.logInGame(error);
+            InvTweaksMod.LOGGER.error("Error loading tree file: " + treeFile.getAbsolutePath());
+            InvTweaksMod.LOGGER.error("Error loading tree file error: " + errorException.getMessage());
 
-            try {
-                // TODO: Refactor this so I'm not just copying the code from above.
-                // The purpose of this is to try to deal with any errors in their config files
-                // Because things crash if config is null
-                backupFile(InvTweaksConst.CONFIG_TREE_FILE);
-                backupFile(InvTweaksConst.CONFIG_RULES_FILE);
-                backupFile(InvTweaksConst.CONFIG_PROPS_FILE);
-
-                //Intentionally not trying to use the merged file.
-                extractFile(InvTweaksConst.DEFAULT_CONFIG_FILE, InvTweaksConst.CONFIG_RULES_FILE);
-                extractFile(InvTweaksConst.DEFAULT_CONFIG_TREE_FILE, InvTweaksConst.CONFIG_TREE_FILE);
-
-                treeFile = InvTweaksConst.CONFIG_TREE_FILE;
-
-        			COMPILED_TREE = InvTweaksItemTreeLoader.load(treeFile);
-                	
-            } catch(Exception e) {
-                // But if this fails too there's not much point in trying again
-
-                if(e.getCause() == null) {
-                    e.initCause(errorException);
-                }
-
-                throw new Error("InvTweaks config load failed", e);
-            }
 
             return false;
         } else {

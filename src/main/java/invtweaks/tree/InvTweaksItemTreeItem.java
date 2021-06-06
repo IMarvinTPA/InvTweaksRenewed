@@ -86,8 +86,7 @@ public class InvTweaksItemTreeItem implements IItemTreeItem {
         }
          IItemTreeItem item = (IItemTreeItem) o;
         return Objects.equals(id, item.getId())
-                && NBTUtil.areNBTEquals(extraData, item.getExtraData(), true)
-                && (damage == InvTweaksConst.DAMAGE_WILDCARD || damage == item.getDamage());
+                && NBTUtil.areNBTEquals(extraData, item.getExtraData(), true);
     }
 
     public String toString() {
