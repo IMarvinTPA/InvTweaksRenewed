@@ -48,8 +48,10 @@ import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TagsUpdatedEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.LogicalSide;
@@ -70,6 +72,8 @@ import net.minecraftforge.fml.network.NetworkRegistry;
 import net.minecraftforge.fml.network.simple.SimpleChannel;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.registries.ForgeRegistry;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.lwjgl.glfw.GLFW;
@@ -146,10 +150,13 @@ public class InvTweaksMod {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::doClientStuff);
 
         // Register ourselves for server and other game events we are interested in
-        MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(this);        
 
         InvTweaksConfig.loadConfig(
                 InvTweaksConfig.CLIENT_CONFIG, FMLPaths.CONFIGDIR.get().resolve("invtweaks-client.toml"));
+
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.VanillaTagTypes.class, event -> {InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);});
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.CustomTagTypes.class, event -> {InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);});       
         
     }
 
@@ -177,7 +184,7 @@ public class InvTweaksMod {
 
     public static void requestSort(boolean isPlayer) {    	
         if (clientOnly()) {    	
-            ItemStack selectedItem = ClientUtils.safeGetPlayer().getHeldItemMainhand();
+            /*ItemStack selectedItem = ClientUtils.safeGetPlayer().getHeldItemMainhand();
             ItemStack offhandStack = ClientUtils.safeGetPlayer().getHeldItemOffhand();
             InvTweaksItemTree tree = InvTweaksConfig.getPlayerTree(ClientUtils.safeGetPlayer());
 
@@ -194,7 +201,7 @@ public class InvTweaksMod {
                     logInGame("Comparator result: " + tree.compareItems(selectedItem, offhandStack), true);
                     logInGame("Comparator debug: " + tree.mostRecentComparison, true);
                 }
-            }
+            }*/
 
             DistExecutor.unsafeRunWhenOn(
                     Dist.CLIENT, () -> () -> Sorting.executeSort(ClientUtils.safeGetPlayer(), isPlayer));

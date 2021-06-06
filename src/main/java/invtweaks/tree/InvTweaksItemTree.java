@@ -63,6 +63,8 @@ public class InvTweaksItemTree implements IItemTree {
 
     private String rootCategory;
     
+    private List<OreDictInfo> oresRegistered = new ArrayList<>();
+    
     private List<ItemStack> allGameItems = new ArrayList<ItemStack>();
 
     private int highestOrder = 0;
@@ -201,11 +203,6 @@ public class InvTweaksItemTree implements IItemTree {
             filteredItems.addAll(items);
         }
 
-        // Filter items of same ID, but different damage value
-        if(items != null && !items.isEmpty()) {
-            items.stream().filter(item -> item.getDamage() != InvTweaksConst.DAMAGE_WILDCARD && item.getDamage() != damage).forEach(filteredItems::remove);
-        }
-
         items = filteredItems;
         filteredItems = new ArrayList<>(items);
 
@@ -224,9 +221,9 @@ public class InvTweaksItemTree implements IItemTree {
              IItemTreeItem newItemDamage = new InvTweaksItemTreeItem(id, id,
                     InvTweaksConst.DAMAGE_WILDCARD, null, newItemOrder, getRootCategory().getName() + "\\_uncategorized\\" + id);
             addItem(getRootCategory().getName(), newItemId);
-            addItem(getRootCategory().getName(), newItemDamage);
+            //addItem(getRootCategory().getName(), newItemDamage);
             filteredItems.add(newItemId);
-            filteredItems.add(newItemDamage);
+            //filteredItems.add(newItemDamage);
         }
 
         filteredItems.removeIf(Objects::isNull);
@@ -347,9 +344,13 @@ public class InvTweaksItemTree implements IItemTree {
         }
         
         if(itemsById.containsKey(newItem.getId())) {
-            itemsById.get(newItem.getId()).add(newItem);
+            List<IItemTreeItem> list = itemsById.get(newItem.getId());
+            if (list.get(0).getOrder() == Integer.MAX_VALUE) {
+                list.remove(0);
+            }
+            list.add(newItem);
         } else {
-             List<IItemTreeItem> list = new ArrayList<>();
+            List<IItemTreeItem> list = new ArrayList<>();
             list.add(newItem);
             itemsById.put(newItem.getId(), list);
         }
@@ -372,15 +373,34 @@ public class InvTweaksItemTree implements IItemTree {
 	            if(i != null) {
 	                addItem(category,
 	                        new InvTweaksItemTreeItem(name, i.getRegistryName().toString(), InvTweaksConst.DAMAGE_WILDCARD, null, order, path));
+                            //log.info(String.format("An OreDictionary name '%s' has '%s'", oreName, i.getRegistryName().toString()));
 	            } else {
 	                log.warn(String.format("An OreDictionary entry for %s is null", oreName));
 	            }
 	        }
+            //if (ItemTags.getCollection().getTagByID(tagId).getAllElements().size() == 0) {
+                //log.info(String.format("An OreDictionary name '%s'is empty.", oreName));
+            //}
+	        oresRegistered.add(new OreDictInfo(category, name, oreName, order, path));
     	} catch (Exception ex) {
     		log.warn(String.format("An OreDictionary name '%s' contains invalid characters.", oreName));
     	}
     	
     }
+
+    public void tagsRegistered() {
+        oresRegistered.stream().forEach(ore -> {
+            ResourceLocation tagId = new ResourceLocation(ore.oreName.toLowerCase()); //Should be only safe tag names by this point.
+            for( Item i : ItemTags.getCollection().getTagByID(tagId).getAllElements()) {
+	            if(i != null) {
+	                addItem(ore.category,
+	                        new InvTweaksItemTreeItem(ore.name, i.getRegistryName().toString(), InvTweaksConst.DAMAGE_WILDCARD, null, ore.order, ore.orePath));
+                            //log.info(String.format("An OreDictionary name '%s' has '%s'", oreName, i.getRegistryName().toString()));
+	            }
+            }
+        });
+    }
+    
    
     public void registerClass(String category, String name, String className, CompoundNBT extraData, int order, String path)
     {
@@ -432,6 +452,22 @@ public class InvTweaksItemTree implements IItemTree {
         }
     }
 
+    private static class OreDictInfo {
+        String category;
+        String name;
+        String oreName;
+        int order;
+        String orePath;
+
+        OreDictInfo(String category_, String name_, String oreName_, int order_, String orePath_) {
+            category = category_;
+            name = name_;
+            oreName = oreName_;
+            order = order_;
+            orePath = orePath_;
+        }
+    }
+    
     private void populateGameItems()
     {
         for (Entry<RegistryKey<Item>, Item> entry : ForgeRegistries.ITEMS.getEntries())
@@ -499,7 +535,13 @@ public class InvTweaksItemTree implements IItemTree {
     public int getItemOrder(ItemStack itemStack) {
         List<IItemTreeItem> items = this.getItems(itemStack.getItem().getRegistryName().toString(),
                 itemStack.getDamage(), itemStack.getTag());
-        return (items.size() > 0) ? items.get(0).getOrder() : Integer.MAX_VALUE;
+        int min_value = Integer.MAX_VALUE;
+        for (IItemTreeItem item : items) {
+            if (item.getOrder() < min_value) {
+                min_value = item.getOrder();
+            }
+        }
+        return min_value;
     }
 
     public int compareItems(ItemStack i, ItemStack j) {

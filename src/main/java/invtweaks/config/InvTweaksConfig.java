@@ -277,11 +277,7 @@ public class InvTweaksConfig {
             COMPILED_CONT_OVERRIDES =
                     cfgToCompiledContOverrides((List<UnmodifiableConfig>) CONT_OVERRIDES.get());
             
-            //long newConfigLastModified = computeConfigLastModified();
-            //if (configLastModified != newConfigLastModified) {
-			loadTreeConfig();
-	            
-            //}
+            checkTreeForUpdates();
         }
     }
     
@@ -363,6 +359,14 @@ public class InvTweaksConfig {
             return getSelfCompiledTree();
         }
         return playerToTree.getOrDefault(ent.getUniqueID(), COMPILED_TREE);
+    }
+
+    public static InvTweaksItemTree getPlayerTreeOnly(PlayerEntity ent) {
+        if (DistExecutor.unsafeCallWhenOn(Dist.CLIENT, () -> () -> ent == Minecraft.getInstance().player)
+                == Boolean.TRUE) {
+            return null;
+        }
+        return playerToTree.getOrDefault(ent.getUniqueID(), null);
     }
 
     public static Ruleset getPlayerRules(PlayerEntity ent) {
@@ -668,7 +672,7 @@ public class InvTweaksConfig {
 
         // Compatibility: File names check
         if(InvTweaksConst.OLD_CONFIG_TREE_FILE.exists()) {
-            if(InvTweaksConst.CONFIG_RULES_FILE.exists()) {
+            if(InvTweaksConst.CONFIG_TREE_FILE.exists()) {
                 backupFile(InvTweaksConst.CONFIG_TREE_FILE);
             }
             InvTweaksConst.OLD_CONFIG_TREE_FILE.renameTo(InvTweaksConst.CONFIG_TREE_FILE);
@@ -714,7 +718,6 @@ public class InvTweaksConfig {
     		} else {
             	treeFile = InvTweaksConst.CONFIG_TREE_FILE;
             }
-            treeFile = InvTweaksConst.CONFIG_TREE_FILE;
 
     		COMPILED_TREE = InvTweaksItemTreeLoader.load(treeFile);
             isDirty = true;

@@ -52,7 +52,7 @@ public class PacketUpdateConfig {
     }
 
     public PacketUpdateConfig(PacketBuffer buf) {
-        InvTweaksMod.LOGGER.info("Recieved update packet with buffer of size: " + buf.readableBytes());
+        //InvTweaksMod.LOGGER.info("Recieved update packet with buffer of size: " + buf.readableBytes());
         lastItemId = "";
         int page = buf.readVarInt();
         if (page == 0) {
@@ -111,7 +111,7 @@ public class PacketUpdateConfig {
                 CompoundNBT extraData = null;
                 int itemOrder =  buf.readVarInt();
                 
-                InvTweaksMod.LOGGER.info(i + "," + itemName + "," + itemId + "," + itemExtraBuffer + "," + itemOrder + "," + buf.readableBytes());
+                //InvTweaksMod.LOGGER.info("Reading: " + i + "," + itemName + "," + itemId + "," + itemExtraBuffer + "," + itemOrder + "," + buf.readableBytes());
 
                 if (itemExtraBuffer.length() > 0) {
                     try {
@@ -147,13 +147,15 @@ public class PacketUpdateConfig {
                                         InvTweaksConfig.cfgToCompiledContOverrides(contOverrides));
                                 InvTweaksConfig.setPlayerTree(Objects.requireNonNull(ctx.get().getSender()),
                                         tree);
-                                InvTweaksMod.LOGGER.info("Received config from client!");
+                                //InvTweaksMod.LOGGER.info("Received config from client!");
                             } else {
-                                InvTweaksItemTree existingTree = InvTweaksConfig.getPlayerTree(Objects.requireNonNull(ctx.get().getSender()));
-                                for (IItemTreeItem item : tree.getAllItems()) {
-                                    existingTree.addItem("stuff", item);
-                                }                                
-                                InvTweaksMod.LOGGER.info("Received more config from client!");
+                                InvTweaksItemTree existingTree = InvTweaksConfig.getPlayerTreeOnly(Objects.requireNonNull(ctx.get().getSender()));
+                                if (existingTree != null) {
+                                    for (IItemTreeItem item : tree.getAllItems()) {
+                                        existingTree.addItem("stuff", item);
+                                    }                          
+                                }      
+                                //InvTweaksMod.LOGGER.info("Received more config from client!");
                             }
                         });
         ctx.get().setPacketHandled(true);
@@ -200,7 +202,7 @@ public class PacketUpdateConfig {
                 export = true;
             }
             if (buf.writerIndex() > 31000) {
-                InvTweaksMod.LOGGER.info("Ran out of room at: " + item.getId());
+                //InvTweaksMod.LOGGER.info("Ran out of room at: " + item.getId());
                 encodeItem(buf, "[ExpectMore]", "[ExpectMore]", null, 0);
                 InvTweaksConfig.setLastItemId(item.getId());
                 export = false;
@@ -211,7 +213,7 @@ public class PacketUpdateConfig {
             //We are done!
             InvTweaksConfig.setLastItemId("");
         }
-        InvTweaksMod.LOGGER.info("Created update packet with buffer of size: " + buf.writerIndex());
+        //InvTweaksMod.LOGGER.info("Created update packet with buffer of size: " + buf.writerIndex());
     }
     
     private void encodeItem(PacketBuffer buf, String itemName, String itemId, CompoundNBT extraData, int itemOrder) {
@@ -223,6 +225,7 @@ public class PacketUpdateConfig {
             buf.writeString(""); //Converts to JSON.
         }
         buf.writeVarInt(itemOrder);
+        //InvTweaksMod.LOGGER.info("Writing: " + itemName + "," + itemId + ",...," + itemOrder + "," + buf.readableBytes());
     }
 
 }
