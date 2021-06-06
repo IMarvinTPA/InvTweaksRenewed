@@ -225,7 +225,27 @@ public class InvTweaksConfig {
                 (List<String>) RULES.get(),
                 (List<UnmodifiableConfig>) CONT_OVERRIDES.get(),
                 ENABLE_AUTOREFILL.get(),
-                COMPILED_TREE);
+                COMPILED_TREE, "");
+    }
+
+    @SuppressWarnings("unchecked")
+    public static PacketUpdateConfig getNextSyncPacket() {
+        return new PacketUpdateConfig(
+                (List<UnmodifiableConfig>) CATS.get(),
+                (List<String>) RULES.get(),
+                (List<UnmodifiableConfig>) CONT_OVERRIDES.get(),
+                ENABLE_AUTOREFILL.get(),
+                COMPILED_TREE, lastItemId);
+    }
+
+    private static String lastItemId = "";
+
+    public static String getLastItemId() {
+        return lastItemId;
+    }
+
+    public static void setLastItemId(String v) {
+        lastItemId = v;
     }
 
     @SuppressWarnings("unused")

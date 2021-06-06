@@ -242,7 +242,7 @@ public class InvTweaksItemTree implements IItemTree {
         {
             populateGameItems();
         }
-
+        
         for (String id : itemsById.keySet()) {
             ResourceLocation rId = null;
             boolean foundEmpty = false;

@@ -456,6 +456,8 @@ public class InvTweaksMod {
             if (InvTweaksConfig.isDirty()) {
                 if (!clientOnly()) NET_INST.sendToServer(InvTweaksConfig.getSyncPacket());
                 InvTweaksConfig.setDirty(false);
+            } else if (!InvTweaksConfig.getLastItemId().isBlank()) {
+                if (!clientOnly()) NET_INST.sendToServer(InvTweaksConfig.getNextSyncPacket());
             }
         }
     }
