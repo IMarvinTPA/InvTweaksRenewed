@@ -155,8 +155,11 @@ public class InvTweaksMod {
         InvTweaksConfig.loadConfig(
                 InvTweaksConfig.CLIENT_CONFIG, FMLPaths.CONFIGDIR.get().resolve("invtweaks-client.toml"));
 
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.VanillaTagTypes.class, event -> {InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);});
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.CustomTagTypes.class, event -> {InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);});       
+
+        DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> {
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.VanillaTagTypes.class, event -> {InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);});
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.CustomTagTypes.class, event -> {InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);});
+        });
         
     }
 
