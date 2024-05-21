@@ -157,8 +157,14 @@ public class InvTweaksMod {
 
 
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.VanillaTagTypes.class, event -> {InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);});
-            MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.CustomTagTypes.class, event -> {InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);});
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.VanillaTagTypes.class, event -> {InvTweaksConfig.setTagsDirty();});
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.CustomTagTypes.class, event -> {InvTweaksConfig.setTagsDirty();});
+            /*MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.VanillaTagTypes.class, event -> {
+                InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);
+            });
+            MinecraftForge.EVENT_BUS.addListener(EventPriority.NORMAL, false, TagsUpdatedEvent.CustomTagTypes.class, event -> {
+                InvTweaksConfig.getSelfCompiledTree().tagsRegistered(); InvTweaksConfig.setDirty(true);
+            });*/
         });
         
     }
@@ -466,7 +472,7 @@ public class InvTweaksMod {
             if (InvTweaksConfig.isDirty()) {
                 if (!clientOnly()) NET_INST.sendToServer(InvTweaksConfig.getSyncPacket());
                 InvTweaksConfig.setDirty(false);
-            } else if (!InvTweaksConfig.getLastItemId().isBlank()) {
+            } else if (!InvTweaksConfig.getLastItemId().isEmpty()) {
                 if (!clientOnly()) NET_INST.sendToServer(InvTweaksConfig.getNextSyncPacket());
             }
         }

@@ -147,7 +147,7 @@ public class PacketUpdateConfig {
                                         InvTweaksConfig.cfgToCompiledContOverrides(contOverrides));
                                 InvTweaksConfig.setPlayerTree(Objects.requireNonNull(ctx.get().getSender()),
                                         tree);
-                                //InvTweaksMod.LOGGER.info("Received config from client!");
+                                InvTweaksMod.LOGGER.info("Received config from client!");
                             } else {
                                 InvTweaksItemTree existingTree = InvTweaksConfig.getPlayerTreeOnly(Objects.requireNonNull(ctx.get().getSender()));
                                 if (existingTree != null) {
@@ -155,14 +155,14 @@ public class PacketUpdateConfig {
                                         existingTree.addItem("stuff", item);
                                     }                          
                                 }      
-                                //InvTweaksMod.LOGGER.info("Received more config from client!");
+                                InvTweaksMod.LOGGER.info("Received more config from client!");
                             }
                         });
         ctx.get().setPacketHandled(true);
     }
 
     public void encode(PacketBuffer buf) {
-        if (lastItemId.isBlank()){
+        if (lastItemId.isEmpty()){
             buf.writeVarInt(0);  //First page.
             buf.writeVarInt(cats.size());
             for (UnmodifiableConfig subCfg : cats) {
@@ -190,9 +190,13 @@ public class PacketUpdateConfig {
             buf.writeVarInt(1);  //Subsequent page..
         }
 
+        if (tree == null) {
+            buf.writeVarInt(0);    
+            return;
+        }
         List<IItemTreeItem> allItems = tree.getAllItems();
         buf.writeVarInt(allItems.size());
-        boolean export = lastItemId.isBlank();
+        boolean export = lastItemId.isEmpty();
 
         for (IItemTreeItem item : allItems) {
             if (export) {

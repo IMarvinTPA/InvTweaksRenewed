@@ -113,6 +113,7 @@ public class InvTweaksConfig {
     private static File treeFile;
     private static long configLastModified = 42;
     private static boolean isDirty = false;
+    private static boolean tagsAreDirty = false;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -284,11 +285,30 @@ public class InvTweaksConfig {
     public static boolean checkTreeForUpdates()
     {
         long newConfigLastModified = computeConfigLastModified();
-        if (configLastModified != newConfigLastModified) {
+        if (configLastModified != newConfigLastModified/* || isDirty == true*/) {
 			return loadTreeConfig();
-    	}
+    	} /*else {
+            
+            if (COMPILED_TREE != null && tagsAreDirty) {
+                InvTweaksConfig.getSelfCompiledTree().tagsRegistered();                
+                tagsAreDirty = false;
+                isDirty = true;
+                return true;
+            }
+        }*/
         return false;
     	
+    }
+
+    public static void setTagsDirty() {
+        if (COMPILED_TREE == null) {
+            loadTreeConfig();
+            isDirty = true;
+        } else {
+            COMPILED_TREE.tagsRegistered();                
+            tagsAreDirty = false;
+            isDirty = true;        
+        }
     }
 
     public static Map<String, Category> getSelfCompiledCats() {
@@ -650,9 +670,9 @@ public class InvTweaksConfig {
             InvTweaksConst.INVTWEAKS_CONFIG_DIR.mkdir();
         }
 
-        if (!InvTweaksConst.TEMP_DIR.exists()) {
-            InvTweaksConst.TEMP_DIR.mkdir();
-        }
+        //if (!InvTweaksConst.TEMP_DIR.exists()) {
+        //    InvTweaksConst.TEMP_DIR.mkdir();
+        //}
 
         if (!InvTweaksConst.INVTWEAKS_TREES_DIR.exists()) {
             if (InvTweaksConst.INVTWEAKS_TREES_DIR.mkdir()) {
