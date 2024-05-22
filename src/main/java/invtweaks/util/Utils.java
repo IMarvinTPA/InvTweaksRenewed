@@ -4,7 +4,10 @@ import com.google.common.base.Equivalence;
 import com.google.common.collect.Streams;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
@@ -191,5 +194,18 @@ public class Utils {
                 .mapToObj(stackBuffer::getStackInSlot)
                 .filter(is -> !is.isEmpty())
                 .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    public static String getItemRegistryString(Item i) {
+        ResourceKey<Item> k = ForgeRegistries.ITEMS.getResourceKey(i).get();
+        ResourceLocation l = k.location();
+        return l.toString();
+    }
+
+    public static String getItemRegistryString(ItemStack stack) {
+        Item i = stack.getItem();
+        ResourceKey<Item> k = ForgeRegistries.ITEMS.getResourceKey(i).get();
+        ResourceLocation l = k.location();
+        return l.toString();
     }
 }

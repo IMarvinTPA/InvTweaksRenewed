@@ -14,6 +14,8 @@ import invtweaks.util.ClientUtils;
 import invtweaks.util.Sorting;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -30,7 +32,12 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TagsUpdatedEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.LogicalSide;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.items.ItemHandlerHelper;
 
@@ -38,6 +45,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.Optional;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -48,7 +56,11 @@ import java.util.stream.IntStream;
 @Mod.EventBusSubscriber(modid = InvTweaksMod.MODID, value = Dist.CLIENT)
 public class ClientEvents {
     private ClientEvents() {
-        // nothing to do
+    }
+
+    @SubscribeEvent
+    public static void onTagsUpdatedEvent(TagsUpdatedEvent event) {
+        InvTweaksConfig.setTagsDirty();
     }
 
     public static final int MIN_SLOTS = 9;
@@ -151,12 +163,14 @@ public class ClientEvents {
             if (InvTweaksConfig.isSortEnabled(true)
                     && KeyMappings.SORT_PLAYER.isActiveAndMatches(
                             InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
+                checkTreeForUpdates();
                 requestSort(true, screen.getClass().getName());
             }
             if (InvTweaksConfig.isSortEnabled(false)
                     && screensWithExtSort.contains(event.getScreen())
                     && KeyMappings.SORT_INVENTORY.isActiveAndMatches(
                             InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
+                checkTreeForUpdates();
                 requestSort(false, screen.getClass().getName());
             }
 
@@ -167,6 +181,7 @@ public class ClientEvents {
                         && (isPlayerSort || screensWithExtSort.contains(event.getScreen()))
                         && KeyMappings.SORT_EITHER.isActiveAndMatches(
                                 InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
+                    checkTreeForUpdates();
                     requestSort(isPlayerSort, screen.getClass().getName());
                 }
             }
@@ -190,6 +205,7 @@ public class ClientEvents {
                 boolean isPlayerSort = slot.container instanceof Inventory;
                 if (InvTweaksConfig.isSortEnabled(isPlayerSort)
                         && (isPlayerSort || screensWithExtSort.contains(event.getScreen()))) {
+                    checkTreeForUpdates();
                     requestSort(isPlayerSort, screen.getClass().getName());
                     event.setCanceled(true); // stop pick block event
                 }
@@ -252,4 +268,25 @@ public class ClientEvents {
         }
     }
     //endregion
+
+    @SubscribeEvent
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) throws Exception {
+        if (event.phase != TickEvent.Phase.END) {
+            return;
+        }
+        if (InvTweaksConfig.isDirty()) {
+            //NET_INST.sendToServer(InvTweaksConfig.getSyncPacket());
+            InvTweaksConfig.setDirty(false);
+        } else if (!InvTweaksConfig.getLastItemId().isEmpty()) {
+            //NET_INST.sendToServer(InvTweaksConfig.getNextSyncPacket());
+        }
+    }
+
+    public static void checkTreeForUpdates() {
+        if (InvTweaksConfig.checkTreeForUpdates()) {
+            //Refresh the tooltips.
+            Minecraft.getInstance().createSearchTrees();
+        }
+    }
+
 }

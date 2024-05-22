@@ -111,7 +111,7 @@ public class Sorting {
         List<Equivalence.Wrapper<ItemStack>> stackWs =
                 new ArrayList<>(gatheredSlots.keySet());
         stackWs.sort(
-                Comparator.comparing(Equivalence.Wrapper::get, Utils.FALLBACK_COMPARATOR));
+                Comparator.comparing(Equivalence.Wrapper::get, InvTweaksConfig.getPlayerTree(player).getTreeComparator()));
 
         for (Map.Entry<String, Category> ent : cats.entrySet()) {
             IntList specificRules = rules.catToInventorySlots(ent.getKey());
@@ -161,7 +161,7 @@ public class Sorting {
                                         .mapToObj(inv.items::get)
                                         .filter(st -> !st.isEmpty())
                                         .iterator());
-        stacks.sort(Utils.FALLBACK_COMPARATOR);
+        stacks.sort(InvTweaksConfig.getPlayerTree(player).getTreeComparator());
         stacks = new LinkedList<>(stacks);
 
         for (int i = 0; i < inv.items.size(); ++i) {
@@ -226,7 +226,7 @@ public class Sorting {
         List<Equivalence.Wrapper<ItemStack>> stackWs =
                 new ArrayList<>(gatheredSlots.keySet());
         stackWs.sort(
-                Comparator.comparing(Equivalence.Wrapper::get, Utils.FALLBACK_COMPARATOR));
+                Comparator.comparing(Equivalence.Wrapper::get, InvTweaksConfig.getPlayerTree(player).getTreeComparator()));
 
         ListIterator<Slot> toIt = validSlots.listIterator();
         for (Equivalence.Wrapper<ItemStack> stackW : stackWs) {
@@ -249,7 +249,7 @@ public class Sorting {
                 .map(Slot::getItem)
                 .filter(st -> !st.isEmpty())
                 .iterator());
-        stacks.sort(Utils.FALLBACK_COMPARATOR);
+        stacks.sort(InvTweaksConfig.getPlayerTree(serverPlayer).getTreeComparator());
 
         Iterator<Slot> slotIt = validSlots.iterator();
         for (ItemStack stack : stacks) {

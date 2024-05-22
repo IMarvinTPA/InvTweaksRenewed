@@ -63,6 +63,8 @@ public class ServerEvents {
             if (InvTweaksConfig.isDirty()) {
                 if (ClientUtils.serverConnectionExists()) {
                     NetworkDispatcher.INSTANCE.sendToServer(InvTweaksConfig.getSyncPacket());
+                } else if (!InvTweaksConfig.getLastItemId().isEmpty()) {
+                    NetworkDispatcher.INSTANCE.sendToServer(InvTweaksConfig.getNextSyncPacket());
                 }
                 InvTweaksConfig.setDirty(false);
             }
